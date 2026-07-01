@@ -10,19 +10,34 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy App
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Deploy Application
+        uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
           script: |
-            cd ~/dump-project
+            set -e
 
-            git pull origin main
+            cd /home/${{ secrets.EC2_USER }}
+
+            if [ ! -d "dump-project" ]; then
+              echo "Cloning repository..."
+              git clone https://github.com/${{ github.repository }}.git
+            fi
+
+            cd dump-project
+
+            echo "Pulling latest code..."
+            git fetch origin
+            git reset --hard origin/main
 
             cd ticketflow
 
-            docker compose down
+            echo "Stopping old containers..."
+            docker compose down || true
 
+            echo "Starting application..."
             docker compose up -d --build
+
+            echo "Deployment completed successfully!"
